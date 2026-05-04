@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Tracker semanal PSP - Sesión 9</title>
+<style>
+  body{font-family:Arial,sans-serif;margin:0;padding:24px;background:#f6f7fb;color:#222}
+  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+  h1{margin:0;font-size:28px}
+  .rule{background:#111827;color:white;padding:14px 18px;border-radius:16px;font-weight:bold}
+  .controls{background:white;border:1px solid #ddd;border-radius:18px;padding:16px;margin-bottom:18px;display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+  label{font-size:12px;font-weight:bold;color:#666;display:block;margin-bottom:4px}
+  select,input,button{width:100%;padding:10px;border-radius:10px;border:1px solid #ccc;font-size:14px}
+  button{background:#111827;color:white;font-weight:bold;cursor:pointer}
+  button.secondary{background:#e8eaf0;color:#111827}
+  .board{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+  .day{background:white;border:1px solid #ddd;border-radius:18px;padding:12px;min-height:420px}
+  .day h2{font-size:18px;margin:0 0 10px;display:flex;justify-content:space-between}
+  .summary{font-size:12px;color:#666;font-weight:normal}
+  .task{border:1px solid #ccc;border-left:7px solid #aaa;border-radius:14px;padding:10px;margin-bottom:10px;background:#fff}
+  .creativa{border-left-color:#9b5de5;background:#eadcff}
+  .tecnica{border-left-color:#168aad;background:#d8ecff}
+  .teorica{border-left-color:#4caf50;background:#ddf4df}
+  .done{opacity:.65;text-decoration:line-through}
+  .subject{font-weight:bold;font-size:14px}
+  .activity{font-size:13px;margin-top:6px}
+  .meta{font-size:12px;margin-top:8px;display:flex;justify-content:space-between}
+  .actions{display:flex;gap:6px;margin-top:8px}
+  .actions button{font-size:12px;padding:7px}
+  .legend{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0;color:#666;font-size:13px}
+  .pill{background:white;border:1px solid #ddd;border-radius:999px;padding:7px 10px}
+  .footer{background:white;border:1px solid #ddd;border-radius:18px;padding:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .big{font-size:24px;font-weight:bold}
+  .small{font-size:13px;color:#666}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Tracker semanal PSP</h1>
+    <div>Sesión 9 · Qué hago, cuándo lo hago y cuánto pesa cada día.</div>
+  </div>
+  <div class="rule">🏋️ Una cosa por vez</div>
+</header>
+
+<section class="controls">
+  <div><label>Día</label><select id="day"><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option></select></div>
+  <div><label>Materia</label><select id="subject">
+    <option>Ilustración Digital</option>
+    <option>Tratamiento Digital de la Imagen I</option>
+    <option>Diseño Gráfico I</option>
+    <option>Representación Gráfica</option>
+    <option>Lógica de la Programación</option>
+    <option>Psicología de la Comunicación</option>
+  </select></div>
+  <div><label>Actividad</label><select id="activity">
+    <option>Boceto / idea</option><option>Avance de producción</option><option>Corrección / ajuste</option>
+    <option>Entrega parcial</option><option>Entrega final</option><option>Práctica / ejercicio</option>
+    <option>Resolver problema</option><option>Anotar dudas</option><option>Reunión con pares</option>
+    <option>Consulta docente</option><option>Lectura de apuntes</option><option>Resumen / mapa</option>
+    <option>Chequeo de comprensión</option><option>Revisión de clase grabada</option>
+  </select></div>
+  <div><label>Tipo de parcial</label><select id="exam">
+    <option value="">No aplica</option><option>Producción con pre-entregas</option><option>Parcial escrito</option>
+    <option>Parcial oral</option><option>Parcial de ejercicios</option><option>Resolución de problemas</option><option>Entrega final</option>
+  </select></div>
+  <div><label>Minutos</label><input id="minutes" type="number" min="10" step="10" value="30"></div>
+  <div style="display:flex;align-items:end;gap:8px"><button onclick="addTask()">+ agregar</button><button class="secondary" onclick="clearAll()">limpiar</button></div>
+</section>
+
+<div class="board" id="board"></div>
+
+<div class="legend">
+  <span class="pill">🟪 Creativas / proyectuales</span>
+  <span class="pill">🟦 Técnicas / metodológicas</span>
+  <span class="pill">🟩 Teóricas</span>
+  <span class="pill">⭐ Parcial / evaluación</span>
+</div>
+
+<section class="footer">
+  <div><div class="big" id="totalMinutes">0</div><div class="small">minutos planificados</div></div>
+  <div><div class="big" id="doneCount">0</div><div class="small">tareas resueltas</div></div>
+  <div><div class="big" id="pendingCount">0</div><div class="small">pendientes visibles</div></div>
+</section>
+
+<script>
+const days = ["Lunes","Martes","Miércoles","Jueves","Viernes"];
+let tasks = JSON.parse(localStorage.getItem("tracker_sesion9_psp") || "[]");
+function getType(subject){
+  if(["Ilustración Digital","Tratamiento Digital de la Imagen I","Diseño Gráfico I"].includes(subject)) return "creativa";
+  if(["Representación Gráfica","Lógica de la Programación"].includes(subject)) return "tecnica";
+  return "teorica";
+}
+function addTask(){
+  const day=document.getElementById("day").value;
+  const subject=document.getElementById("subject").value;
+  const activity=document.getElementById("activity").value;
+  const exam=document.getElementById("exam").value;
+  const minutes=parseInt(document.getElementById("minutes").value||"0",10);
+  tasks.push({id:Date.now(),day,subject,type:getType(subject),activity,exam,minutes,done:false});
+  save();
+}
+function toggleTask(id){tasks=tasks.map(t=>t.id===id?{...t,done:!t.done}:t);save();}
+function deleteTask(id){tasks=tasks.filter(t=>t.id!==id);save();}
+function clearAll(){if(confirm("¿Limpiar todo el tracker?")){tasks=[];save();}}
+function save(){localStorage.setItem("tracker_sesion9_psp",JSON.stringify(tasks));render();}
+function render(){
+  const board=document.getElementById("board"); board.innerHTML="";
+  days.forEach(day=>{
+    const dayTasks=tasks.filter(t=>t.day===day);
+    const minutes=dayTasks.reduce((a,t)=>a+(t.minutes||0),0);
+    const done=dayTasks.filter(t=>t.done).length;
+    const div=document.createElement("section"); div.className="day";
+    div.innerHTML=`<h2>${day}<span class="summary">${minutes} min · ${done}/${dayTasks.length}</span></h2><div class="cards"></div>`;
+    const cards=div.querySelector(".cards");
+    dayTasks.forEach(t=>{
+      const card=document.createElement("div"); card.className=`task ${t.type} ${t.done?"done":""}`;
+      card.innerHTML=`<div class="subject">${t.subject} ${t.exam?"⭐":""}</div>
+      <div class="activity">${t.activity}</div>
+      ${t.exam?`<div class="activity"><b>Evaluación:</b> ${t.exam}</div>`:""}
+      <div class="meta"><span>${t.minutes} min</span><span>${t.done?"resuelto":"pendiente"}</span></div>
+      <div class="actions"><button onclick="toggleTask(${t.id})">${t.done?"desmarcar":"resolver"}</button><button class="secondary" onclick="deleteTask(${t.id})">borrar</button></div>`;
+      cards.appendChild(card);
+    });
+    board.appendChild(div);
+  });
+  document.getElementById("totalMinutes").textContent=tasks.reduce((a,t)=>a+(t.minutes||0),0);
+  document.getElementById("doneCount").textContent=tasks.filter(t=>t.done).length;
+  document.getElementById("pendingCount").textContent=tasks.filter(t=>!t.done).length;
+}
+render();
+</script>
+</body>
+</html>
